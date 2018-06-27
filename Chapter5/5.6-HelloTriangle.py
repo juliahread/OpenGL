@@ -1,8 +1,8 @@
 '''
 Translated from source code from https://learnopengl.com/
 
-5.5 Hello Triangle
-
+5.6 Hello Triangle
+Draws orange rectangle
 Some differences exist between solution code, pdf description, and this code
 
 Original work Copyright (c) 2015 Joey de Vries
@@ -24,6 +24,7 @@ import glfw
 import numpy as np
 import sys
 
+# settings
 WIDTH, HEIGHT = 800, 600
 
 vertexShaderSource = """
@@ -45,6 +46,28 @@ void main()
 """
 
 def main():
+
+    # declare draw method so it can be reused during resizing
+    def draw():
+        gl.glClearColor(0.2, 0.3, 0.3, 1.0)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+
+        gl.glUseProgram(shaderProgram)
+
+        gl.glBindVertexArray(VAO)
+        gl.glDrawElements(gl.GL_TRIANGLES, 3*indices.shape[0], gl.GL_UNSIGNED_INT, None)
+        gl.glBindVertexArray(0)
+
+        glfw.swap_buffers(window)
+        
+    # declaring resize callback in main to allow access to variables
+    def window_size_callback(window, width, height):
+        gl.glViewport(0, 0, width, height)
+        # calling draw to allow drawing while resizing
+        draw()
+
+    # glfw: initialize and configure
+    
     glfw.init()
 
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
@@ -52,9 +75,11 @@ def main():
     glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE) # No deprecated functions
     glfw.window_hint(glfw.RESIZABLE, gl.GL_TRUE)
 
-    if sys.platform == 'darwin':  # How Mac OS X is identified by Python
+    # checking if run on Mac OS X
+    if sys.platform == 'darwin':
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
 
+    # glfw window creation
     window = glfw.create_window(WIDTH, HEIGHT, 'LearnOpenGL', None, None)   # tutorial: (800, 600...
     if window is None:
         glfw.terminate()
@@ -67,6 +92,9 @@ def main():
     width, height = glfw.get_framebuffer_size(window)
     glfw.set_window_size_callback(window, window_size_callback)
 
+    # build and compile shader program
+
+    # vertex shader
     vertexShader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
     gl.glShaderSource(vertexShader, vertexShaderSource)
     gl.glCompileShader(vertexShader);
@@ -74,6 +102,7 @@ def main():
         infoLog = gl.glGetShaderInfoLog(vertexShader).decode()
         raise Exception("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + infoLog)
 
+    # fragment shader
     fragmentShader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
     gl.glShaderSource(fragmentShader, fragmentShaderSource)
     gl.glCompileShader(fragmentShader);
@@ -81,6 +110,7 @@ def main():
         infoLog = gl.glGetShaderInfoLog(fragmentShader).decode()
         raise Exception("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + infoLog)
 
+    # link shaders
     shaderProgram = gl.glCreateProgram()
     gl.glAttachShader(shaderProgram, vertexShader)
     gl.glAttachShader(shaderProgram, fragmentShader)
@@ -91,21 +121,35 @@ def main():
     gl.glDeleteShader(vertexShader)
     gl.glDeleteShader(fragmentShader)
 
+    # set up vertex data (and buffer(s)) and configure vertex attributes
+
     vertices = np.array(
-            [[-0.5, -0.5, 0.0],  # Left  
-             [0.5, -0.5, 0.0],   # Right 
-             [0.0,  0.5, 0.0]],  # Top   
+            [[ 0.5,  0.5, 0.0],   # Left  
+             [ 0.5, -0.5, 0.0],   # Right 
+             [-0.5, -0.5, 0.0],
+             [-0.5,  0.5, 0.0]],  # Top   
             dtype=np.float32)
 
-    VBO, VAO = gl.GLuint(), gl.GLuint()
+    indices = np.array(
+            [[0, 1, 3],  # first triangle
+             [1, 2, 3]], # second triangle
+            dtype=np.int32)
+
+    VBO, VAO, EBO = gl.GLuint(), gl.GLuint(), gl.GLuint()
 
     gl.glGenVertexArrays(1, VAO)    # 1 -> 1 buffer to be generated
     gl.glGenBuffers(1, VBO)
+    gl.glGenBuffers(1, EBO)
+
+    # bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s)
 
     gl.glBindVertexArray(VAO);
 
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, VBO)   # bind = make active/current for subsequent ops
     gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_STATIC_DRAW)
+
+    gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, EBO)
+    gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, indices, gl.GL_STATIC_DRAW)
 
     stride = vertices.itemsize * vertices.shape[1]
     offset = gl.ctypes.c_void_p(vertices.itemsize * 0)
@@ -116,19 +160,14 @@ def main():
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
     gl.glBindVertexArray(0)
 
+    # to put in wireframe mode
+    gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+
+    # render loop
     while not glfw.window_should_close(window):
         glfw.poll_events()
 
-        gl.glClearColor(0.2, 0.3, 0.3, 1.0)
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-
-        gl.glUseProgram(shaderProgram)
-
-        gl.glBindVertexArray(VAO)
-        gl.glDrawArrays(gl.GL_TRIANGLES, 0, vertices.shape[0])
-        gl.glBindVertexArray(0)
-
-        glfw.swap_buffers(window)
+        draw()
 
     glfw.terminate()
 
@@ -137,9 +176,6 @@ def main():
 def key_callback(window, key, scancode, action, mods):
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
         glfw.set_window_should_close(window, True)
-
-def window_size_callback(window, width, height):
-    gl.glViewport(0, 0, width, height)
 
 if __name__ == "__main__":
     main()
