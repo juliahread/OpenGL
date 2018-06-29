@@ -54,6 +54,40 @@ void main()
 }
 """
 
+def shader(vs_src, frag_src):
+
+    # build and compile shader program
+
+    # vertex shader
+    vertexShader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
+    gl.glShaderSource(vertexShader, vs_src)
+    gl.glCompileShader(vertexShader);
+    if not gl.glGetShaderiv(vertexShader, gl.GL_COMPILE_STATUS):
+        infoLog = gl.glGetShaderInfoLog(vertexShader).decode()
+        raise Exception("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + infoLog)
+
+    # fragment shader
+    fragmentShader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
+    gl.glShaderSource(fragmentShader, frag_src)
+    gl.glCompileShader(fragmentShader);
+    if not gl.glGetShaderiv(fragmentShader, gl.GL_COMPILE_STATUS):
+        infoLog = gl.glGetShaderInfoLog(fragmentShader).decode()
+        raise Exception("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + infoLog)
+
+    # link shaders
+    shaderProgram = gl.glCreateProgram()
+    gl.glAttachShader(shaderProgram, vertexShader)
+    gl.glAttachShader(shaderProgram, fragmentShader)
+    gl.glLinkProgram(shaderProgram)
+    if not gl.glGetProgramiv(shaderProgram, gl.GL_LINK_STATUS):
+        infoLog = gl.glGetProgramInfoLog(shaderProgram).decode()
+        raise Exception("ERROR::SHADER::PROGRAM::LINKING_FAILED\n" + infoLog)
+    gl.glDeleteShader(vertexShader)
+    gl.glDeleteShader(fragmentShader)
+
+    return shaderProgram
+
+
 def main():
 
     # declare draw method so it can be reused during resizing
@@ -105,39 +139,6 @@ def main():
 
     width, height = glfw.get_framebuffer_size(window)
     glfw.set_window_size_callback(window, window_size_callback)
-
-    def shader(vs_src, frag_src):
-
-        # build and compile shader program
-
-        # vertex shader
-        vertexShader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
-        gl.glShaderSource(vertexShader, vs_src)
-        gl.glCompileShader(vertexShader);
-        if not gl.glGetShaderiv(vertexShader, gl.GL_COMPILE_STATUS):
-            infoLog = gl.glGetShaderInfoLog(vertexShader).decode()
-            raise Exception("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" + infoLog)
-
-        # fragment shader
-        fragmentShader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
-        gl.glShaderSource(fragmentShader, frag_src)
-        gl.glCompileShader(fragmentShader);
-        if not gl.glGetShaderiv(fragmentShader, gl.GL_COMPILE_STATUS):
-            infoLog = gl.glGetShaderInfoLog(fragmentShader).decode()
-            raise Exception("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" + infoLog)
-
-        # link shaders
-        shaderProgram = gl.glCreateProgram()
-        gl.glAttachShader(shaderProgram, vertexShader)
-        gl.glAttachShader(shaderProgram, fragmentShader)
-        gl.glLinkProgram(shaderProgram)
-        if not gl.glGetProgramiv(shaderProgram, gl.GL_LINK_STATUS):
-            infoLog = gl.glGetProgramInfoLog(shaderProgram).decode()
-            raise Exception("ERROR::SHADER::PROGRAM::LINKING_FAILED\n" + infoLog)
-        gl.glDeleteShader(vertexShader)
-        gl.glDeleteShader(fragmentShader)
-
-        return shaderProgram
 
     shaderProgram1 = shader(vertexShaderSource, fragmentShaderSource)
     shaderProgram2 = shader(vertexShaderSource, fragmentShaderSource2)
